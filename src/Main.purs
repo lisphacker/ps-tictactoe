@@ -14,6 +14,7 @@ import Halogen.HTML.Events as HE
 import Halogen.HTML.Properties as HP
 import Halogen.VDom.Driver (runUI)
 
+import Game
 
 type State = Int
 
@@ -40,11 +41,15 @@ myButton =
     render state =
       let
         label = show state
-      in HH.button
-         [ HP.title "+"
-         , HE.onClick (HE.input_ Increment)
+      in HH.div []
+         [ HH.button
+           [ HE.onClick (HE.input_ Increment) ]
+           [ HH.text "+" ]
+         , HH.text label
+         , HH.button
+           [ HP.enabled false, HE.onClick (HE.input_ Decrement) ]
+           [ HH.text "-" ]
          ]
-         [ HH.text label ]
 
     --eval :: Query ~> H.HalogenM State Query () Message m
     eval :: Query ~> (H.ComponentDSL State Query Message m)
