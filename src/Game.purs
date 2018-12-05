@@ -1,13 +1,16 @@
 module Game ( Player(..)
             , GameState(..)
+            , draw
+            , enumMoves
             , newGame
-            , play)
+            , play
+            , win)
        where
 
 import Prelude
 import Data.Tuple
 import Data.Maybe (Maybe(..), isNothing)
-import Data.Array (alterAt, elemIndex, replicate, updateAt, (!!))
+import Data.Array (alterAt, elemIndex, filter, mapWithIndex, replicate, updateAt, (!!))
 
 data Player = X | O
 
@@ -77,3 +80,11 @@ draw :: GameState -> Boolean
 draw gs@(GameState { cells, player }) = case elemIndex Nothing cells of
                                           Just _  -> false
                                           Nothing -> not $ win gs
+
+enumMoves :: GameState -> Array Int
+enumMoves (GameState { cells, player }) = filter (\x -> x /= -1) $ mapWithIndex f cells
+  where f i (Just _) = -1
+        f i Nothing  = i
+
+--evaluate :: GameState -> Tuple Int Int
+
