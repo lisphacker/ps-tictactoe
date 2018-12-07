@@ -16,15 +16,13 @@ import Halogen.VDom.Driver (runUI)
 
 import Game
 
-type State = Int
+data Query a = ResetGame
+             | Play Int
 
-data Query a = Increment a
-             | Decrement a
+data OutputMessage = Current GameState
 
-data Message = Updated Int
-
-myButton :: forall m. H.Component HH.HTML Query Unit Message m
-myButton =
+myBoard :: forall m. H.Component HH.HTML Query Unit OutputMessage m
+myBoard =
   H.component { initialState: const initialState
               , render
               , eval
@@ -32,42 +30,61 @@ myButton =
               }
   where
 
-    initialState :: State
-    initialState = 0
+    initialState :: GameState
+    initialState = newGame
 
-    --render :: State -> H.ComponentHTML Query () m
-    --render :: State -> HH.HTML Void (Query Unit)
-    render :: State -> H.ComponentHTML Query
+    render :: GameState -> H.ComponentHTML Query
     render state =
       let
         label = show state
       in HH.div []
-         [ HH.button
-           [ HE.onClick (HE.input_ Increment) ]
-           [ HH.text "+" ]
-         , HH.text label
-         , HH.button
-           [ HP.enabled false, HE.onClick (HE.input_ Decrement) ]
-           [ HH.text "-" ]
+         [ HH.button [] [ HH.text "Reset" ]
+         , HH.table []
+           [
+             HH.tr []
+             [
+               HH.td []
+               [ HH.button [] []
+               , HH.button [] []
+               , HH.button [] []
+               ]
+             ]
+           , HH.tr []
+             [
+               HH.td []
+               [ HH.button [] []
+               , HH.button [] []
+               , HH.button [] []
+               ]
+             ]
+           , HH.tr []
+             [
+               HH.td []
+               [ HH.button [] []
+               , HH.button [] []
+               , HH.button [] []
+               ]
+             ]
+           ]
          ]
 
-    --eval :: Query ~> H.HalogenM State Query () Message m
-    eval :: Query ~> (H.ComponentDSL State Query Message m)
+    eval :: Query ~> (H.ComponentDSL GameState Query OutputMessage m)
     eval = case _ of
-      Increment next -> do
+      ResetGame -> do
         state <- H.get
-        let nextState = state + 1
+        let nextState = newGame
         H.put nextState
-        H.raise $ Updated nextState
-        pure next
-      Decrement next -> do
+        H.raise $ Current nextState
+        pure nextState
+
+      Play pos -> do
         state <- H.get
-        let nextState = state - 1
+        let nextState = state
         H.put nextState
-        H.raise $ Updated nextState
-        pure next
+        H.raise $ Current nextState
+        pure nextState
 
 main :: Effect Unit
 main = HA.runHalogenAff $ do
   body <- HA.awaitBody
-  runUI myButton unit body
+  runUI myBoard unit body
