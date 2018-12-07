@@ -23,12 +23,18 @@ import Debug.Trace
 data Query a = ResetGame a
              | Play Int a
 
---data OutputMessage = Current GameState
+--data OutputMessage = Current State
+
+type State = { gameState :: GameState
+             , statusText :: String
+             }
 
 genButton :: forall p. Int -> GameState -> HH.HTML p (Query Unit)
 genButton pos (GameState {cells, player}) = case cells !! pos of
                                               Just (Just p) -> HH.button [] [HH.text $ show p]
-                                              Just Nothing  -> HH.button [HE.onClick (HE.input_ (Play pos))] [HH.text "*"]
+                                              Just Nothing  -> HH.button
+                                                               [HE.onClick (HE.input_ (Play pos))]
+                                                               [HH.text "*"]
                                               Nothing       -> HH.button [] [HH.text "*"]
 
 myBoard :: forall m. H.Component HH.HTML Query Unit Void m
@@ -40,58 +46,59 @@ myBoard =
               }
   where
 
-    initialState :: GameState
-    initialState = newGame
+    initialState :: State
+    initialState = {gameState: newGame, statusText: ""}
 
-    render :: GameState -> H.ComponentHTML Query
+    render :: State -> H.ComponentHTML Query
     render state =
       let
         label = show state
       in HH.div []
-         [ HH.button [] [HH.text "Reset"]
+         [ HH.button [HE.onClick (HE.input_ ResetGame)] [HH.text "Reset"]
          , HH.table []
            [
              HH.tr []
              [
                HH.td []
-               [ genButton 0 state
-               , genButton 1 state
-               , genButton 2 state
+               [ genButton 0 state.gameState
+               , genButton 1 state.gameState
+               , genButton 2 state.gameState
                ]
              ]
            , HH.tr []
              [
                HH.td []
-               [ genButton 3 state
-               , genButton 4 state
-               , genButton 5 state
+               [ genButton 3 state.gameState
+               , genButton 4 state.gameState
+               , genButton 5 state.gameState
                ]
              ]
            , HH.tr []
              [
                HH.td []
-               [ genButton 6 state
-               , genButton 7 state
-               , genButton 8 state
+               [ genButton 6 state.gameState
+               , genButton 7 state.gameState
+               , genButton 8 state.gameState
                ]
              ]
            ]
+         , HH.text state.statusText
          ]
 
-    eval :: Query ~> (H.ComponentDSL GameState Query Void m)
+    eval :: Query ~> (H.ComponentDSL State Query Void m)
     eval = case _ of
       ResetGame qp -> do
         state <- H.get
-        let nextState = newGame
+        let nextState = {gameState: newGame, statusText: ""}
         H.put nextState
         --H.raise $ Current nextState
         pure qp
 
       Play pos qp -> do
         state <- H.get
-        let nextState = case play pos state of
-                          Just state' -> switchPlayer state'
-                          Nothing     -> state
+        let nextState = case play pos state.gameState of
+              Just state' -> {gameState: switchPlayer state', statusText: ""}
+              Nothing     -> {gameState: state.gameState, statusText: "Invalid move"}
         H.put nextState
         --H.raise $ Current nextState
         pure $ trace (show nextState) (\_ -> qp)
