@@ -14,6 +14,8 @@ import Data.Foldable (foldl)
 import Data.Array (alterAt, elemIndex, filter, mapWithIndex, replicate, updateAt, zip, (!!))
 import Data.Maybe (Maybe(..), isNothing, fromJust)
 
+import Debug.Trace
+
 data Player = X | O
 
 instance showPlayer :: Show Player where
@@ -45,17 +47,20 @@ play i (GameState {cells, player})
   | otherwise              = let maybeCells' = alterAt i setCell cells
                              in
                               case maybeCells' of
-                                Just cells' -> Just $ GameState { cells: cells', player: nextPlayer player }
+                                Just cells' -> Just $ GameState { cells: cells', player: player }
                                 Nothing     -> Nothing
   where setCell :: Maybe Player -> Maybe (Maybe Player)
         setCell Nothing = Just $ Just player
         setCell _       = Nothing
 
+switchPlayer :: GameState -> GameState
+switchPlayer (GameState {cells, player}) = GameState {cells: cells, player: nextPlayer player}
+
 winScore :: Int
-winScore = 2048
+winScore = 1024 * 1024
 
 drawScore :: Int
-drawScore = 1024
+drawScore = 0 --1024
 
 win :: GameState -> Boolean
 win (GameState { cells, player }) = allSame 0 1 2 ||
@@ -88,10 +93,10 @@ enumMoves (GameState { cells, player }) = filter (\x -> x /= -1) $ mapWithIndex 
   where f i (Just _) = -1
         f i Nothing  = i
 
-evaluate :: GameState -> Tuple Int Int
-evaluate gs@(GameState { cells, player }) = let moves = enumMoves gs
-                                                scores = map computeScore moves
-                                            in maxScoredMove moves scores
+evaluate :: Int -> GameState -> Tuple Int Int
+evaluate depth gs@(GameState { cells, player }) = let moves = enumMoves gs
+                                                      scores = map computeScore moves
+                                                  in maxScoredMove moves scores
   where computeScore :: Int -> Int
         computeScore move = case maybeComputeScore move of
                               Just score -> score
@@ -106,7 +111,7 @@ evaluate gs@(GameState { cells, player }) = let moves = enumMoves gs
                         if draw gs' then
                           drawScore
                         else
-                          let Tuple move' score' = evaluate gs'
+                          let Tuple move' score' = evaluate (depth + 1) (switchPlayer gs')
                           in
                            -(score' / 2)
           pure score
@@ -115,5 +120,12 @@ evaluate gs@(GameState { cells, player }) = let moves = enumMoves gs
         maxScoredMove moves scores = foldl f (Tuple (-1) (-winScore - 1)) (zip moves scores)
           where f max@(Tuple _ maxScore) this@(Tuple _ s) = if s > maxScore then this else max
 
-g0 = newGame
-g1 = fromJust $ play 1 g0
+g0 = Just newGame
+g1 = map switchPlayer $ g0 >>= play 0
+g2 = map switchPlayer $ g1 >>= play 2 
+g3 = map switchPlayer $ g2 >>= play 8
+g4 = map switchPlayer $ g3 >>= play 4
+g5 = map switchPlayer $ g4 >>= play 6
+g6 = map switchPlayer $ g5 >>= play 3
+
+g7 = map switchPlayer $ g6 >>= play 7
