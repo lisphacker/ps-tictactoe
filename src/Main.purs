@@ -14,14 +14,24 @@ import Halogen.HTML.Events as HE
 import Halogen.HTML.Properties as HP
 import Halogen.VDom.Driver (runUI)
 
+import Data.Array ((!!))
+
 import Game
 
-data Query a = ResetGame
-             | Play Int
+import Debug.Trace
 
-data OutputMessage = Current GameState
+data Query a = ResetGame a
+             | Play Int a
 
-myBoard :: forall m. H.Component HH.HTML Query Unit OutputMessage m
+--data OutputMessage = Current GameState
+
+genButton :: forall p. Int -> GameState -> HH.HTML p (Query Unit)
+genButton pos (GameState {cells, player}) = case cells !! pos of
+                                              Just (Just p) -> HH.button [] [HH.text $ show p]
+                                              Just Nothing  -> HH.button [HE.onClick (HE.input_ (Play pos))] [HH.text "*"]
+                                              Nothing       -> HH.button [] [HH.text "*"]
+
+myBoard :: forall m. H.Component HH.HTML Query Unit Void m
 myBoard =
   H.component { initialState: const initialState
               , render
@@ -38,51 +48,53 @@ myBoard =
       let
         label = show state
       in HH.div []
-         [ HH.button [] [ HH.text "Reset" ]
+         [ HH.button [] [HH.text "Reset"]
          , HH.table []
            [
              HH.tr []
              [
                HH.td []
-               [ HH.button [] []
-               , HH.button [] []
-               , HH.button [] []
+               [ genButton 0 state
+               , genButton 1 state
+               , genButton 2 state
                ]
              ]
            , HH.tr []
              [
                HH.td []
-               [ HH.button [] []
-               , HH.button [] []
-               , HH.button [] []
+               [ genButton 3 state
+               , genButton 4 state
+               , genButton 5 state
                ]
              ]
            , HH.tr []
              [
                HH.td []
-               [ HH.button [] []
-               , HH.button [] []
-               , HH.button [] []
+               [ genButton 6 state
+               , genButton 7 state
+               , genButton 8 state
                ]
              ]
            ]
          ]
 
-    eval :: Query ~> (H.ComponentDSL GameState Query OutputMessage m)
+    eval :: Query ~> (H.ComponentDSL GameState Query Void m)
     eval = case _ of
-      ResetGame -> do
+      ResetGame qp -> do
         state <- H.get
         let nextState = newGame
         H.put nextState
-        H.raise $ Current nextState
-        pure nextState
+        --H.raise $ Current nextState
+        pure qp
 
-      Play pos -> do
+      Play pos qp -> do
         state <- H.get
-        let nextState = state
+        let nextState = case play pos state of
+                          Just state' -> switchPlayer state'
+                          Nothing     -> state
         H.put nextState
-        H.raise $ Current nextState
-        pure nextState
+        --H.raise $ Current nextState
+        pure $ trace (show nextState) (\_ -> qp)
 
 main :: Effect Unit
 main = HA.runHalogenAff $ do

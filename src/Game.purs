@@ -14,8 +14,6 @@ import Data.Foldable (foldl)
 import Data.Array (alterAt, elemIndex, filter, mapWithIndex, replicate, updateAt, zip, (!!))
 import Data.Maybe (Maybe(..), isNothing, fromJust)
 
-import Debug.Trace
-
 data Player = X | O
 
 instance showPlayer :: Show Player where
