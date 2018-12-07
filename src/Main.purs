@@ -26,17 +26,33 @@ data Query a = ResetGame a
 
 --data OutputMessage = Current State
 
+data Status = InProgress
+            | YouWin
+            | IWin
+            | Draw
+            | Invalid
+
+derive instance eqStatus :: Eq Status
+
+instance showStatis :: Show Status where
+  show InProgress = ""
+  show YouWin     = "You win !!!"
+  show IWin       = "I win !!!"
+  show Draw       = "Draw"
+  show Invalid    = "INVALID STATE"
+              
 type State = { gameState :: GameState
-             , statusText :: String
+             , status    :: Status
              }
 
-genButton :: forall p. Int -> GameState -> HH.HTML p (Query Unit)
-genButton pos (GameState {cells, player}) = case cells !! pos of
-                                              Just (Just p) -> HH.button [] [HH.text $ show p]
-                                              Just Nothing  -> HH.button
-                                                               [HE.onClick (HE.input_ (Play pos))]
-                                                               [HH.text "*"]
-                                              Nothing       -> HH.button [] [HH.text "*"]
+genButton :: forall p. Int -> State -> HH.HTML p (Query Unit)
+genButton pos state = let GameState {cells, player} = state.gameState
+                      in case cells !! pos of
+                        Just (Just p) -> HH.button [] [HH.text $ show p]
+                        Just Nothing  -> HH.button
+                                         (if state.status == InProgress then [HE.onClick (HE.input_ (Play pos))] else [])
+                                         [HH.text "*"]
+                        Nothing       -> HH.button [] [HH.text "*"]
 
 myBoard :: forall m. H.Component HH.HTML Query Unit Void m
 myBoard =
@@ -48,7 +64,7 @@ myBoard =
   where
 
     initialState :: State
-    initialState = {gameState: newGame, statusText: ""}
+    initialState = {gameState: newGame, status: InProgress}
 
     render :: State -> H.ComponentHTML Query
     render state =
@@ -61,36 +77,36 @@ myBoard =
              HH.tr []
              [
                HH.td []
-               [ genButton 0 state.gameState
-               , genButton 1 state.gameState
-               , genButton 2 state.gameState
+               [ genButton 0 state
+               , genButton 1 state
+               , genButton 2 state
                ]
              ]
            , HH.tr []
              [
                HH.td []
-               [ genButton 3 state.gameState
-               , genButton 4 state.gameState
-               , genButton 5 state.gameState
+               [ genButton 3 state
+               , genButton 4 state
+               , genButton 5 state
                ]
              ]
            , HH.tr []
              [
                HH.td []
-               [ genButton 6 state.gameState
-               , genButton 7 state.gameState
-               , genButton 8 state.gameState
+               [ genButton 6 state
+               , genButton 7 state
+               , genButton 8 state
                ]
              ]
            ]
-         , HH.text state.statusText
+         , HH.text $ show state.status
          ]
 
     eval :: Query ~> (H.ComponentDSL State Query Void m)
     eval = case _ of
       ResetGame qp -> do
         state <- H.get
-        let nextState = {gameState: newGame, statusText: ""}
+        let nextState = {gameState: newGame, status: InProgress}
         H.put nextState
         --H.raise $ Current nextState
         pure qp
@@ -104,11 +120,11 @@ myBoard =
             makePlay pos state = case play pos state.gameState of
               Just gs2 -> if win gs2
                           then
-                            {gameState: gs2, statusText: "You win !!!"}
+                            {gameState: gs2, status: YouWin}
                           else
                             if draw gs2
                             then
-                              {gameState: gs2, statusText: "Draw"}
+                              {gameState: gs2, status: Draw}
                             else
                               let gs3 = switchPlayer gs2
                                   Tuple move _ = evaluate 0 gs3
@@ -116,15 +132,15 @@ myBoard =
                                case play move gs3 of
                                  Just gs4 -> if win gs4
                                              then
-                                               {gameState: gs4, statusText: "I win !!!"}
+                                               {gameState: gs4, status: IWin}
                                              else
                                                if draw gs4
                                                then
-                                                 {gameState: gs4, statusText: "Draw"}
+                                                 {gameState: gs4, status: Draw}
                                                else
-                                                 {gameState: switchPlayer gs4, statusText: ""}
-                                 Nothing -> {gameState: gs3, statusText: "Invalid state"}
-              Nothing -> {gameState: state.gameState, statusText: "Invalid move"}
+                                                 {gameState: switchPlayer gs4, status: InProgress}
+                                 Nothing -> {gameState: gs3, status: Invalid}
+              Nothing -> {gameState: state.gameState, status: Invalid}
 
                             
 
