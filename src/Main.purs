@@ -6,6 +6,7 @@ import Effect (Effect)
 import Effect.Console (log)
 
 import Data.Maybe (Maybe(..))
+import Data.Tuple (Tuple(..))
 
 import Halogen as H
 import Halogen.Aff as HA
@@ -95,13 +96,37 @@ myBoard =
         pure qp
 
       Play pos qp -> do
-        state <- H.get
-        let nextState = case play pos state.gameState of
-              Just state' -> {gameState: switchPlayer state', statusText: ""}
-              Nothing     -> {gameState: state.gameState, statusText: "Invalid move"}
-        H.put nextState
+        H.modify_ $ makePlay pos
         --H.raise $ Current nextState
-        pure $ trace (show nextState) (\_ -> qp)
+        pure qp
+
+      where makePlay :: Int -> State -> State
+            makePlay pos state = case play pos state.gameState of
+              Just gs2 -> if win gs2
+                          then
+                            {gameState: gs2, statusText: "You win !!!"}
+                          else
+                            if draw gs2
+                            then
+                              {gameState: gs2, statusText: "Draw"}
+                            else
+                              let gs3 = switchPlayer gs2
+                                  Tuple move _ = evaluate 0 gs3
+                              in
+                               case play move gs3 of
+                                 Just gs4 -> if win gs4
+                                             then
+                                               {gameState: gs4, statusText: "I win !!!"}
+                                             else
+                                               if draw gs4
+                                               then
+                                                 {gameState: gs4, statusText: "Draw"}
+                                               else
+                                                 {gameState: switchPlayer gs4, statusText: ""}
+                                 Nothing -> {gameState: gs3, statusText: "Invalid state"}
+              Nothing -> {gameState: state.gameState, statusText: "Invalid move"}
+
+                            
 
 main :: Effect Unit
 main = HA.runHalogenAff $ do
