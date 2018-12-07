@@ -6,6 +6,7 @@
     "console",
     "effect",
     "halogen",
+    "lists",
     "prelude",
     "psci-support"
   ]

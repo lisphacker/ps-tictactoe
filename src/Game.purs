@@ -1,16 +1,18 @@
-module Game ( Player(..)
+module Game {-( Player(..)
             , GameState(..)
             , draw
             , enumMoves
             , newGame
             , play
-            , win)
+            , win)-}
        where
 
 import Prelude
 import Data.Tuple
-import Data.Maybe (Maybe(..), isNothing)
-import Data.Array (alterAt, elemIndex, filter, mapWithIndex, replicate, updateAt, (!!))
+
+import Data.Foldable (foldl)
+import Data.Array (alterAt, elemIndex, filter, mapWithIndex, replicate, updateAt, zip, (!!))
+import Data.Maybe (Maybe(..), isNothing, fromJust)
 
 data Player = X | O
 
@@ -86,5 +88,32 @@ enumMoves (GameState { cells, player }) = filter (\x -> x /= -1) $ mapWithIndex 
   where f i (Just _) = -1
         f i Nothing  = i
 
---evaluate :: GameState -> Tuple Int Int
+evaluate :: GameState -> Tuple Int Int
+evaluate gs@(GameState { cells, player }) = let moves = enumMoves gs
+                                                scores = map computeScore moves
+                                            in maxScoredMove moves scores
+  where computeScore :: Int -> Int
+        computeScore move = case maybeComputeScore move of
+                              Just score -> score
+                              Nothing    -> 0
+                              
+        maybeComputeScore :: Int -> Maybe Int
+        maybeComputeScore move = do
+          gs' <- play move gs
+          let score = if win gs' then
+                        winScore
+                      else
+                        if draw gs' then
+                          drawScore
+                        else
+                          let Tuple move' score' = evaluate gs'
+                          in
+                           -(score' / 2)
+          pure score
+          
+        maxScoredMove :: Array Int -> Array Int -> Tuple Int Int
+        maxScoredMove moves scores = foldl f (Tuple (-1) (-winScore - 1)) (zip moves scores)
+          where f max@(Tuple _ maxScore) this@(Tuple _ s) = if s > maxScore then this else max
 
+g0 = newGame
+g1 = fromJust $ play 1 g0
