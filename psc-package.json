@@ -4,10 +4,13 @@
   "source": "https://github.com/purescript/package-sets.git",
   "depends": [
     "console",
+    "css",
     "debug",
     "effect",
     "halogen",
+    "halogen-css",
     "lists",
+    "numbers",
     "prelude",
     "psci-support"
   ]

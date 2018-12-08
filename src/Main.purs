@@ -8,8 +8,15 @@ import Effect.Console (log)
 import Data.Maybe (Maybe(..))
 import Data.Tuple (Tuple(..))
 
+import Data.Int (toNumber)
+
+import CSS as CSS
+import CSS.TextAlign as CSSTA
+import CSS.VerticalAlign as CSSVA
+
 import Halogen as H
 import Halogen.Aff as HA
+import Halogen.HTML.CSS as HCSS
 import Halogen.HTML as HH
 import Halogen.HTML.Events as HE
 import Halogen.HTML.Properties as HP
@@ -34,7 +41,7 @@ data Status = InProgress
 
 derive instance eqStatus :: Eq Status
 
-instance showStatis :: Show Status where
+instance showStatus :: Show Status where
   show InProgress = ""
   show YouWin     = "You win !!!"
   show IWin       = "I win !!!"
@@ -45,14 +52,42 @@ type State = { gameState :: GameState
              , status    :: Status
              }
 
-genButton :: forall p. Int -> State -> HH.HTML p (Query Unit)
-genButton pos state = let GameState {cells, player} = state.gameState
+{-
+genCellView :: forall p. Int -> State -> HH.HTML p (Query Unit)
+genCellView pos state = let GameState {cells, player} = state.gameState
                       in case cells !! pos of
                         Just (Just p) -> HH.button [] [HH.text $ show p]
                         Just Nothing  -> HH.button
                                          (if state.status == InProgress then [HE.onClick (HE.input_ (Play pos))] else [])
                                          [HH.text "*"]
                         Nothing       -> HH.button [] [HH.text "*"]
+-}
+
+cellSize = toNumber 100
+
+genCellView :: forall p. Int -> State -> HH.HTML p (Query Unit)
+genCellView pos state = let GameState {cells, player} = state.gameState
+                            css = HCSS.style do
+                               CSS.width $ CSS.px cellSize
+                               CSS.height $ CSS.px cellSize
+                               CSS.fontSize $ CSS.pt (toNumber 40)
+                            div = case cells !! pos of
+                              Just (Just p) -> HH.div [css] [HH.text $ show p]
+                              Just Nothing  -> HH.div
+                                               (if state.status == InProgress
+                                                then
+                                                  [css,HE.onClick (HE.input_ (Play pos))]
+                                                else
+                                                  [css])
+                                               [HH.text " "]
+                              Nothing       -> HH.div [] [HH.text " "]
+                        in
+                          HH.td [
+                                  HCSS.style do
+                                     CSS.border CSS.solid (CSS.px (toNumber 1)) CSS.black
+                                     CSSTA.textAlign CSSTA.center
+                                     CSSVA.verticalAlign CSSVA.Middle
+                                ] [div]
 
 myBoard :: forall m. H.Component HH.HTML Query Unit Void m
 myBoard =
@@ -76,27 +111,21 @@ myBoard =
            [
              HH.tr []
              [
-               HH.td []
-               [ genButton 0 state
-               , genButton 1 state
-               , genButton 2 state
-               ]
+               genCellView 0 state
+             , genCellView 1 state
+             , genCellView 2 state
              ]
            , HH.tr []
              [
-               HH.td []
-               [ genButton 3 state
-               , genButton 4 state
-               , genButton 5 state
-               ]
+               genCellView 3 state
+             , genCellView 4 state
+             , genCellView 5 state
              ]
            , HH.tr []
              [
-               HH.td []
-               [ genButton 6 state
-               , genButton 7 state
-               , genButton 8 state
-               ]
+               genCellView 6 state
+             , genCellView 7 state
+             , genCellView 8 state
              ]
            ]
          , HH.text $ show state.status
