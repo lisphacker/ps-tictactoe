@@ -1,0 +1,32 @@
+{
+  "name": "tictactoe",
+  "version": "1.0.0",
+  "description": "TicTacToe game in PureScript",
+  "main": "app.js",
+  "directories": {
+    "test": "test"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/lisphacker/ps-tictactoe.git"
+  },
+  "keywords": [
+    "tictactoe",
+    "purescript"
+  ],
+  "author": "Gautham Ganapathy <gauthamg@gmail.com>",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/lisphacker/ps-tictactoe/issues"
+  },
+  "homepage": "https://github.com/lisphacker/ps-tictactoe#readme",
+  "devDependencies": {
+    "google-closure-compiler": "^20190709.0.0",
+    "psc-package": "^3.0.1",
+    "pulp": "^13.0.0",
+    "purescript": "^0.13.2"
+  }
+}
