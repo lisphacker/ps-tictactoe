@@ -1,32 +1,26 @@
 module Main where
 
+import Debug.Trace
+import Game
 import Prelude
-
-import Effect (Effect)
-import Effect.Console (log)
-
-import Data.Maybe (Maybe(..))
-import Data.Tuple (Tuple(..))
-
-import Data.Int (toNumber)
 
 import CSS as CSS
 import CSS.TextAlign as CSSTA
 import CSS.VerticalAlign as CSSVA
-
+import Data.Array ((!!))
+import Data.Int (toNumber)
+import Data.Maybe (Maybe(..))
+import Data.Tuple (Tuple(..))
+import Effect (Effect)
+import Effect.Console (log)
 import Halogen as H
 import Halogen.Aff as HA
-import Halogen.HTML.CSS as HCSS
 import Halogen.HTML as HH
-import Halogen.HTML.Events as HE
+import Halogen.HTML.CSS as HCSS
+import Halogen.HTML.Elements as HEL
+import Halogen.HTML.Events as HEV
 import Halogen.HTML.Properties as HP
 import Halogen.VDom.Driver (runUI)
-
-import Data.Array ((!!))
-
-import Game
-
-import Debug.Trace
 
 data Query a = ResetGame a
              | Play Int a
@@ -63,6 +57,7 @@ genCellView pos state = let GameState {cells, player} = state.gameState
                         Nothing       -> HH.button [] [HH.text "*"]
 -}
 
+cellSize :: Number
 cellSize = toNumber 100
 
 genCellView :: forall p. Int -> State -> HH.HTML p (Query Unit)
@@ -76,7 +71,7 @@ genCellView pos state = let GameState {cells, player} = state.gameState
                               Just Nothing  -> HH.div
                                                (if state.status == InProgress
                                                 then
-                                                  [css,HE.onClick (HE.input_ (Play pos))]
+                                                  [css,HEV.onClick (\_ -> Just (Play pos unit))] --(HEL.input (Play pos unit))]
                                                 else
                                                   [css])
                                                [HH.text " "]
@@ -91,22 +86,28 @@ genCellView pos state = let GameState {cells, player} = state.gameState
 
 myBoard :: forall m. H.Component HH.HTML Query Unit Void m
 myBoard =
-  H.component { initialState: const initialState
-              , render
-              , eval
-              , receiver: const Nothing
-              }
+  H.mkComponent { initialState: const initialState
+                , render: render
+                , eval: H.mkEval $ H.defaultEval
+                     { handleAction = handleAction
+                     }
+                }
   where
 
     initialState :: State
     initialState = {gameState: newGame, status: InProgress}
 
-    render :: State -> H.ComponentHTML Query
+    render :: State -> H.ComponentHTML (Query Unit) () m
     render state =
       let
         label = show state
       in HH.div []
-         [ HH.button [HE.onClick (HE.input_ ResetGame)] [HH.text "Reset"]
+         [ HH.button 
+           [
+             HEV.onClick (\_ -> Just (ResetGame unit))
+             {-HEV.onClick (HEL.input ResetGame)-}
+           ] 
+           [HH.text "Reset"]
          , HH.table []
            [
              HH.tr []
@@ -131,7 +132,47 @@ myBoard =
          , HH.text $ show state.status
          ]
 
-    eval :: Query ~> (H.ComponentDSL State Query Void m)
+    handleAction :: forall o. (Query Unit) -> H.HalogenM State (Query Unit) () o m Unit
+    handleAction = case _ of
+      ResetGame qp -> do
+        state <- H.get
+        let nextState = {gameState: newGame, status: InProgress}
+        H.put nextState
+        --H.raise $ Current nextState
+        pure qp
+
+      Play pos qp -> do
+        H.modify_ $ makePlay pos
+        --H.raise $ Current nextState
+        pure qp
+
+      where makePlay :: Int -> State -> State
+            makePlay pos state = case play pos state.gameState of
+              Just gs2 -> if win gs2
+                          then
+                            {gameState: gs2, status: YouWin}
+                          else
+                            if draw gs2
+                            then
+                              {gameState: gs2, status: Draw}
+                            else
+                              let gs3 = switchPlayer gs2
+                                  Tuple move _ = evaluate 0 gs3
+                              in
+                               case play move gs3 of
+                                 Just gs4 -> if win gs4
+                                             then
+                                               {gameState: gs4, status: IWin}
+                                             else
+                                               if draw gs4
+                                               then
+                                                 {gameState: gs4, status: Draw}
+                                               else
+                                                 {gameState: switchPlayer gs4, status: InProgress}
+                                 Nothing -> {gameState: gs3, status: Invalid}
+              Nothing -> {gameState: state.gameState, status: Invalid}
+{-
+    eval :: Query ~> (H.ComponentHTML State (Query Unit) Void m)
     eval = case _ of
       ResetGame qp -> do
         state <- H.get
@@ -170,8 +211,7 @@ myBoard =
                                                  {gameState: switchPlayer gs4, status: InProgress}
                                  Nothing -> {gameState: gs3, status: Invalid}
               Nothing -> {gameState: state.gameState, status: Invalid}
-
-                            
+-}                            
 
 main :: Effect Unit
 main = HA.runHalogenAff $ do
